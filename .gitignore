@@ -1,0 +1,11 @@
+data/raw/*.csv
+data/raw/*.zip
+data/processed/*.csv
+models/*.joblib
+models/*.json
+reports/figures/*.csv
+reports/figures/*.png
+__pycache__/
+.streamlit/
+.venv/
+

@@ -1,0 +1,10 @@
+pandas>=2.2
+numpy>=2.0
+scikit-learn>=1.6
+imbalanced-learn>=0.14
+xgboost>=3.0
+streamlit>=1.50
+plotly>=6.0
+shap>=0.50
+joblib>=1.5
+

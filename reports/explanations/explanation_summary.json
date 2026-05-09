@@ -1,0 +1,11 @@
+{
+  "dataset_source": "kaggle",
+  "model_name": "random_forest_balanced",
+  "global_method": "shap",
+  "local_method": "shap",
+  "sample_size": 800,
+  "top_n_transactions": 8,
+  "top_n_features": 8,
+  "feature_importance_path": "T:\\VScode\\Projetos\\portfolio_ia_dados\\07_em_andamento\\transacoes_suspeitas\\reports\\explanations\\feature_importance.csv",
+  "local_explanations_path": "T:\\VScode\\Projetos\\portfolio_ia_dados\\07_em_andamento\\transacoes_suspeitas\\reports\\explanations\\local_explanations.csv"
+}
