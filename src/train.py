@@ -236,22 +236,34 @@ def write_experiment_log(
     LATEST_EXPERIMENT_PATH.write_text(json.dumps(experiment, indent=2), encoding="utf-8")
 
 
+def stratified_sample(df: pd.DataFrame, sample_size: int | None) -> pd.DataFrame:
+    if not sample_size or len(df) <= sample_size:
+        return df
+
+    rows = []
+    original_size = len(df)
+    for _, group in df.groupby(TARGET_COLUMN, sort=False):
+        group_size = min(len(group), max(1, round(sample_size * len(group) / original_size)))
+        rows.append(group.sample(group_size, random_state=RANDOM_STATE))
+
+    sampled = pd.concat(rows)
+
+    if len(sampled) > sample_size:
+        sampled = sampled.sample(sample_size, random_state=RANDOM_STATE)
+    elif len(sampled) < sample_size:
+        remaining = df.drop(index=sampled.index)
+        extra_size = min(len(remaining), sample_size - len(sampled))
+        if extra_size:
+            sampled = pd.concat([sampled, remaining.sample(extra_size, random_state=RANDOM_STATE)])
+
+    return sampled.sample(frac=1, random_state=RANDOM_STATE).reset_index(drop=True)
+
+
 def train_all(sample_size: int | None = None) -> dict:
     ensure_project_dirs()
     df, source = load_transactions()
 
-    if sample_size and len(df) > sample_size:
-        df = (
-            df.groupby(TARGET_COLUMN, group_keys=False)
-            .apply(
-                lambda group: group.sample(
-                    min(len(group), max(1, int(sample_size * len(group) / len(df)))),
-                    random_state=RANDOM_STATE,
-                )
-            )
-            .sample(frac=1, random_state=RANDOM_STATE)
-            .reset_index(drop=True)
-        )
+    df = stratified_sample(df, sample_size)
 
     x_train, x_valid, x_test, y_train, y_valid, y_test = split_train_validation_test(df)
     feature_names = list(x_train.columns)
