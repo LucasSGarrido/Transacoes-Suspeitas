@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -42,7 +43,13 @@ from src.config import (  # noqa: E402
     THRESHOLD_PATH,
 )
 from src.evaluate import best_cost_threshold, cost_metrics  # noqa: E402
+from src.explain import generate_explanations  # noqa: E402
 from src.features import add_risk_bucket, engineer_features  # noqa: E402
+from src.train import train_all  # noqa: E402
+
+
+AUTO_TRAIN_SAMPLE_SIZE = int(os.getenv("AUTO_TRAIN_SAMPLE_SIZE", "6000"))
+AUTO_EXPLAIN_SAMPLE_SIZE = int(os.getenv("AUTO_EXPLAIN_SAMPLE_SIZE", "600"))
 
 
 st.set_page_config(
@@ -52,10 +59,51 @@ st.set_page_config(
 inject_css()
 
 
+@st.cache_resource(show_spinner=False)
+def ensure_dashboard_artifacts() -> dict:
+    if SCORED_DATA_PATH.exists() and METRICS_PATH.exists() and THRESHOLD_PATH.exists():
+        return {"generated": False}
+
+    result = train_all(sample_size=AUTO_TRAIN_SAMPLE_SIZE)
+    warning = None
+
+    try:
+        if (
+            not FEATURE_IMPORTANCE_PATH.exists()
+            or not LOCAL_EXPLANATIONS_PATH.exists()
+            or not EXPLANATION_SUMMARY_PATH.exists()
+        ):
+            generate_explanations(sample_size=AUTO_EXPLAIN_SAMPLE_SIZE)
+    except Exception as exc:  # pragma: no cover - optional dashboard enrichment
+        warning = str(exc)
+
+    return {"generated": True, "train_result": result, "explanation_warning": warning}
+
+
+def prepare_dashboard_artifacts() -> None:
+    if SCORED_DATA_PATH.exists() and METRICS_PATH.exists():
+        return
+
+    with st.spinner("Preparando dados de demonstracao para abrir o dashboard..."):
+        try:
+            status = ensure_dashboard_artifacts()
+        except Exception as exc:
+            st.error(
+                "Nao foi possivel preparar os dados do dashboard automaticamente. "
+                "Execute `python -m src.train` localmente e publique os artefatos gerados."
+            )
+            with st.expander("Detalhes tecnicos"):
+                st.exception(exc)
+            st.stop()
+
+    if status.get("generated"):
+        st.toast("Dashboard preparado com dados sinteticos de demonstracao.")
+
+
 @st.cache_data
 def load_data(scored_mtime: float, metrics_mtime: float, config_mtime: float) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     if not SCORED_DATA_PATH.exists():
-        st.error("Execute `python -m src.train` antes de abrir o dashboard.")
+        st.error("Nao foi possivel encontrar ou gerar os dados do dashboard.")
         st.stop()
 
     data = pd.read_csv(SCORED_DATA_PATH)
@@ -209,6 +257,8 @@ def top_feature_text(importance: pd.DataFrame) -> str:
         "legítimo, não atributos de negócio diretamente interpretáveis."
     )
 
+
+prepare_dashboard_artifacts()
 
 df, metrics, config = load_data(
     file_mtime(SCORED_DATA_PATH),
