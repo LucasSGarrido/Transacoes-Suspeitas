@@ -2,6 +2,8 @@
 
 Projeto de Machine Learning para priorizar transações financeiras com maior risco de fraude.
 
+https://transacoes-suspeitas-a6u4mdcdg2z5tezkqpmm6k.streamlit.app
+
 O objetivo não é apenas treinar um classificador, mas montar um pequeno produto analítico: análise exploratória, comparação de modelos, explicabilidade, simulador de custo e uma fila de investigação para apoiar decisões antifraude.
 
 ## Status
